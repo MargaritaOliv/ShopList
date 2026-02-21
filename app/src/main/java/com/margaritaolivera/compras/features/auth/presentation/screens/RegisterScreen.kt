@@ -1,0 +1,153 @@
+package com.margaritaolivera.compras.features.auth.presentation.screens
+
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.margaritaolivera.compras.features.auth.presentation.viewmodels.AuthViewModel
+import com.margaritaolivera.compras.features.auth.presentation.components.CustomTextField
+
+@Composable
+fun RegisterScreen(
+    viewModel: AuthViewModel,
+    onRegisterSuccess: () -> Unit,
+    onNavigateToLogin: () -> Unit
+) {
+    val state by viewModel.uiState.collectAsState()
+    var nombre by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var confirmPassword by remember { mutableStateOf("") }
+    var localError by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(state.isSuccess) {
+        if (state.isSuccess) {
+            onRegisterSuccess()
+            viewModel.resetState()
+        }
+    }
+
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(
+                text = "Crear Cuenta",
+                style = MaterialTheme.typography.headlineLarge.copy(
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    fontSize = 32.sp
+                )
+            )
+            Text(
+                text = "Organiza tus compras fácilmente",
+                style = MaterialTheme.typography.bodyLarge.copy(
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                ),
+                modifier = Modifier.padding(top = 8.dp, bottom = 32.dp)
+            )
+
+            CustomTextField(
+                value = nombre,
+                onValueChange = { nombre = it; localError = null },
+                label = "Nombre Completo",
+                icon = Icons.Default.Person
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            CustomTextField(
+                value = email,
+                onValueChange = { email = it; localError = null },
+                label = "Correo electrónico",
+                icon = Icons.Default.Email,
+                keyboardType = KeyboardType.Email
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            CustomTextField(
+                value = password,
+                onValueChange = { password = it; localError = null },
+                label = "Contraseña",
+                icon = Icons.Default.Lock,
+                isPassword = true
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            CustomTextField(
+                value = confirmPassword,
+                onValueChange = { confirmPassword = it; localError = null },
+                label = "Confirmar contraseña",
+                icon = Icons.Default.Lock,
+                isPassword = true
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            val displayError = localError ?: state.error
+            if (displayError != null) {
+                Text(
+                    text = displayError,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+            }
+
+            Button(
+                onClick = {
+                    if (password != confirmPassword) {
+                        localError = "Las contraseñas no coinciden"
+                    } else {
+                        viewModel.register(nombre, email, password)
+                    }
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                shape = RoundedCornerShape(percent = 50),
+                enabled = !state.isLoading && nombre.isNotEmpty() && email.isNotEmpty() && password.isNotEmpty()
+            ) {
+                if (state.isLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                } else {
+                    Text(
+                        text = "REGISTRARSE",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("¿Ya tienes cuenta?", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                TextButton(onClick = onNavigateToLogin) {
+                    Text("Inicia sesión", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+    }
+}
