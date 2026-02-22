@@ -6,7 +6,7 @@ import com.margaritaolivera.compras.features.lists.domain.model.ShoppingList
 import com.margaritaolivera.compras.features.lists.domain.repository.ListRepository
 import javax.inject.Inject
 
-class ListRepositoryImpl @Inject constructor(
+class   ListRepositoryImpl @Inject constructor(
     private val api: ApiClient
 ) : ListRepository {
 

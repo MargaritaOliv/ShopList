@@ -2,6 +2,7 @@ package com.margaritaolivera.compras.core.di
 
 import com.margaritaolivera.compras.core.network.ApiClient
 import com.margaritaolivera.compras.core.network.TokenManager
+import com.margaritaolivera.compras.features.lists.data.remote.ListApiService
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import dagger.Module
 import dagger.Provides
@@ -27,13 +28,10 @@ object NetworkModule {
     fun provideAuthInterceptor(tokenManager: TokenManager): Interceptor {
         return Interceptor { chain ->
             val requestBuilder = chain.request().newBuilder()
-
             val token = runBlocking { tokenManager.getToken() }
-
             if (!token.isNullOrEmpty()) {
                 requestBuilder.addHeader("Authorization", "Bearer $token")
             }
-
             chain.proceed(requestBuilder.build())
         }
     }
@@ -52,12 +50,10 @@ object NetworkModule {
     @Singleton
     fun provideRetrofit(okHttpClient: OkHttpClient): Retrofit {
         val contentType = "application/json".toMediaType()
-
         val jsonConfig = Json {
             ignoreUnknownKeys = true
             coerceInputValues = true
         }
-
         return Retrofit.Builder()
             .baseUrl(BASE_URL)
             .client(okHttpClient)
@@ -69,5 +65,11 @@ object NetworkModule {
     @Singleton
     fun provideApiClient(retrofit: Retrofit): ApiClient {
         return retrofit.create(ApiClient::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideListApiService(retrofit: Retrofit): ListApiService {
+        return retrofit.create(ListApiService::class.java)
     }
 }
