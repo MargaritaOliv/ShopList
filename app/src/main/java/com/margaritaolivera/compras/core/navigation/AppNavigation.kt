@@ -2,14 +2,18 @@ package com.margaritaolivera.compras.core.navigation
 
 import androidx.compose.runtime.Composable
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.margaritaolivera.compras.features.auth.presentation.screens.LoginScreen
 import com.margaritaolivera.compras.features.auth.presentation.screens.RegisterScreen
 import com.margaritaolivera.compras.features.auth.presentation.viewmodels.AuthViewModel
 import com.margaritaolivera.compras.features.lists.presentation.screens.HomeScreen
+import com.margaritaolivera.compras.features.lists.presentation.screens.ListDetailScreen
 import com.margaritaolivera.compras.features.lists.presentation.viewmodels.HomeViewModel
+import com.margaritaolivera.compras.features.lists.presentation.viewmodels.ListDetailViewModel
 
 @Composable
 fun AppNavigation() {
@@ -17,9 +21,9 @@ fun AppNavigation() {
 
     NavHost(navController = navController, startDestination = "login") {
 
+
         composable("login") {
             val authViewModel: AuthViewModel = hiltViewModel()
-
             LoginScreen(
                 viewModel = authViewModel,
                 onLoginSuccess = {
@@ -27,15 +31,12 @@ fun AppNavigation() {
                         popUpTo("login") { inclusive = true }
                     }
                 },
-                onNavigateToRegister = {
-                    navController.navigate("register")
-                }
+                onNavigateToRegister = { navController.navigate("register") }
             )
         }
 
         composable("register") {
             val authViewModel: AuthViewModel = hiltViewModel()
-
             RegisterScreen(
                 viewModel = authViewModel,
                 onRegisterSuccess = {
@@ -43,21 +44,32 @@ fun AppNavigation() {
                         popUpTo("register") { inclusive = true }
                     }
                 },
-                onNavigateToLogin = {
-                    navController.popBackStack()
-                }
+                onNavigateToLogin = { navController.popBackStack() }
             )
         }
 
         composable("home") {
             val homeViewModel: HomeViewModel = hiltViewModel()
-
             HomeScreen(
                 viewModel = homeViewModel,
                 onNavigateToListDetail = { listId ->
+                    navController.navigate("detail/$listId")
                 }
             )
+        }
 
+        composable(
+            route = "detail/{listId}",
+            arguments = listOf(navArgument("listId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val listId = backStackEntry.arguments?.getString("listId") ?: ""
+            val detailViewModel: ListDetailViewModel = hiltViewModel()
+
+            ListDetailScreen(
+                listId = listId,
+                viewModel = detailViewModel,
+                onNavigateBack = { navController.popBackStack() }
+            )
         }
     }
 }
