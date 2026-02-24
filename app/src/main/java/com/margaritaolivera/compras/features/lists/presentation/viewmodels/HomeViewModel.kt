@@ -3,8 +3,7 @@ package com.margaritaolivera.compras.features.lists.presentation.viewmodels
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.margaritaolivera.compras.core.network.TokenManager
-import com.margaritaolivera.compras.features.lists.domain.usecase.GetUserListsUseCase
-import com.margaritaolivera.compras.features.lists.domain.usecase.CreateListUseCase
+import com.margaritaolivera.compras.features.lists.domain.repository.ListRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -14,17 +13,12 @@ import javax.inject.Inject
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
-    private val getUserListsUseCase: GetUserListsUseCase,
-    private val createListUseCase: CreateListUseCase,
+    private val listRepository: ListRepository,
     private val tokenManager: TokenManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState = _uiState.asStateFlow()
-
-    init {
-        loadUserDataAndLists()
-    }
 
     fun loadUserDataAndLists() {
         viewModelScope.launch {
@@ -46,7 +40,7 @@ class HomeViewModel @Inject constructor(
     }
 
     private suspend fun fetchLists(userId: String) {
-        getUserListsUseCase(userId).fold(
+        listRepository.getUserLists(userId).fold(
             onSuccess = { myLists ->
                 _uiState.update { it.copy(isLoading = false, lists = myLists) }
             },
@@ -61,12 +55,36 @@ class HomeViewModel @Inject constructor(
             val userId = tokenManager.getUserId() ?: return@launch
             _uiState.update { it.copy(isLoading = true) }
 
-            createListUseCase(name, userId).fold(
-                onSuccess = {
-                    fetchLists(userId)
-                },
+            listRepository.createList(name, userId).fold(
+                onSuccess = { fetchLists(userId) },
                 onFailure = { error ->
                     _uiState.update { it.copy(isLoading = false, error = error.message) }
+                }
+            )
+        }
+    }
+
+    fun deleteList(listId: String) {
+        viewModelScope.launch {
+            val userId = tokenManager.getUserId() ?: return@launch
+            _uiState.update { it.copy(isLoading = true) }
+            listRepository.deleteList(listId).fold(
+                onSuccess = { fetchLists(userId) },
+                onFailure = { error ->
+                    _uiState.update { it.copy(isLoading = false, error = "Error al eliminar") }
+                }
+            )
+        }
+    }
+
+    fun updateList(listId: String, newName: String) {
+        viewModelScope.launch {
+            val userId = tokenManager.getUserId() ?: return@launch
+            _uiState.update { it.copy(isLoading = true) }
+            listRepository.updateList(listId, newName).fold(
+                onSuccess = { fetchLists(userId) },
+                onFailure = { error ->
+                    _uiState.update { it.copy(isLoading = false, error = "Error al actualizar") }
                 }
             )
         }

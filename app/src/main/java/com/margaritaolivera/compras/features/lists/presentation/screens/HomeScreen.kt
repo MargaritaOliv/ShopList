@@ -13,9 +13,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.repeatOnLifecycle
+import com.margaritaolivera.compras.features.lists.domain.model.ShoppingList
 import com.margaritaolivera.compras.features.lists.presentation.components.ListCard
 import com.margaritaolivera.compras.features.lists.presentation.viewmodels.HomeViewModel
 
@@ -26,40 +30,91 @@ fun HomeScreen(
     onNavigateToListDetail: (String) -> Unit
 ) {
     val state by viewModel.uiState.collectAsState()
+    val lifecycleOwner = LocalLifecycleOwner.current
 
-    var showDialog by remember { mutableStateOf(false) }
-    var eventName by remember { mutableStateOf("") }
+    LaunchedEffect(lifecycleOwner) {
+        lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            viewModel.loadUserDataAndLists()
+        }
+    }
 
-    if (showDialog) {
+    var showCreateDialog by remember { mutableStateOf(false) }
+    var showEditDialog by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
+
+    var selectedList by remember { mutableStateOf<ShoppingList?>(null) }
+    var eventNameInput by remember { mutableStateOf("") }
+
+    if (showCreateDialog) {
         AlertDialog(
-            onDismissRequest = { showDialog = false },
+            onDismissRequest = { showCreateDialog = false },
             title = { Text("Nuevo Evento", fontWeight = FontWeight.Bold) },
             text = {
                 OutlinedTextField(
-                    value = eventName,
-                    onValueChange = { eventName = it },
+                    value = eventNameInput,
+                    onValueChange = { eventNameInput = it },
                     label = { Text("Nombre del evento") },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
+                    modifier = Modifier.fillMaxWidth()
                 )
             },
             confirmButton = {
-                Button(
-                    onClick = {
-                        if (eventName.isNotBlank()) {
-                            viewModel.createNewEvent(eventName)
-                            eventName = ""
-                            showDialog = false
-                        }
+                Button(onClick = {
+                    if (eventNameInput.isNotBlank()) {
+                        viewModel.createNewEvent(eventNameInput)
+                        eventNameInput = ""
+                        showCreateDialog = false
                     }
-                ) {
-                    Text("Crear")
-                }
+                }) { Text("Crear") }
             },
             dismissButton = {
-                TextButton(onClick = { showDialog = false }) {
-                    Text("Cancelar")
-                }
+                TextButton(onClick = { showCreateDialog = false }) { Text("Cancelar") }
+            }
+        )
+    }
+
+    if (showEditDialog && selectedList != null) {
+        AlertDialog(
+            onDismissRequest = { showEditDialog = false },
+            title = { Text("Editar Evento") },
+            text = {
+                OutlinedTextField(
+                    value = eventNameInput,
+                    onValueChange = { eventNameInput = it },
+                    label = { Text("Nuevo nombre") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            confirmButton = {
+                Button(onClick = {
+                    if (eventNameInput.isNotBlank()) {
+                        viewModel.updateList(selectedList!!.id, eventNameInput)
+                        eventNameInput = ""
+                        showEditDialog = false
+                    }
+                }) { Text("Guardar") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showEditDialog = false }) { Text("Cancelar") }
+            }
+        )
+    }
+
+    if (showDeleteDialog && selectedList != null) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("¿Eliminar Evento?") },
+            text = { Text("Se borrará '${selectedList!!.name}' y todos sus productos.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.deleteList(selectedList!!.id)
+                        showDeleteDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) { Text("Eliminar") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) { Text("Cancelar") }
             }
         )
     }
@@ -67,7 +122,10 @@ fun HomeScreen(
     Scaffold(
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { showDialog = true },
+                onClick = {
+                    eventNameInput = ""
+                    showCreateDialog = true
+                },
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = Color.White,
                 shape = CircleShape
@@ -84,7 +142,6 @@ fun HomeScreen(
                 .padding(horizontal = 24.dp)
         ) {
             Spacer(modifier = Modifier.height(24.dp))
-
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -129,31 +186,23 @@ fun HomeScreen(
 
             Box(modifier = Modifier.fillMaxSize()) {
                 when {
-                    state.isLoading -> {
-                        CircularProgressIndicator(
-                            modifier = Modifier.align(Alignment.Center),
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                    state.error != null -> {
-                        Text(
-                            text = state.error!!,
-                            color = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.align(Alignment.Center)
-                        )
-                    }
-                    state.lists.isEmpty() -> {
-                        Text(
-                            text = "No hay eventos. ¡Crea uno!",
-                            modifier = Modifier.align(Alignment.Center)
-                        )
-                    }
+                    state.isLoading -> CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                    state.lists.isEmpty() -> Text("No hay eventos.", modifier = Modifier.align(Alignment.Center))
                     else -> {
                         LazyColumn(contentPadding = PaddingValues(bottom = 80.dp)) {
                             items(state.lists) { list ->
                                 ListCard(
                                     shoppingList = list,
-                                    onClick = { onNavigateToListDetail(list.id) }
+                                    onClick = { onNavigateToListDetail(list.id) },
+                                    onEdit = {
+                                        selectedList = list
+                                        eventNameInput = list.name
+                                        showEditDialog = true
+                                    },
+                                    onDelete = {
+                                        selectedList = list
+                                        showDeleteDialog = true
+                                    }
                                 )
                             }
                         }

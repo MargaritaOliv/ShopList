@@ -1,6 +1,7 @@
 package com.margaritaolivera.compras.features.lists.presentation.screens
 
 import android.widget.Toast
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -16,6 +17,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.margaritaolivera.compras.features.lists.domain.model.ListItem
 import com.margaritaolivera.compras.features.lists.presentation.components.ItemRow
 import com.margaritaolivera.compras.features.lists.presentation.viewmodels.ListDetailViewModel
 
@@ -29,19 +31,20 @@ fun ListDetailScreen(
     val state by viewModel.uiState.collectAsState()
     val context = LocalContext.current
 
-    var showItemDialog by remember { mutableStateOf(false) }
+    var showCreateDialog by remember { mutableStateOf(false) }
+    var showEditDialog by remember { mutableStateOf(false) }
     var showInviteDialog by remember { mutableStateOf(false) }
 
-    var title by remember { mutableStateOf("") }
-    var quantity by remember { mutableStateOf("") }
-    var note by remember { mutableStateOf("") }
+    // Variables para creación/edición
+    var selectedItem by remember { mutableStateOf<ListItem?>(null) }
+    var itemTitle by remember { mutableStateOf("") }
+    var itemQuantity by remember { mutableStateOf("") }
+    var itemNote by remember { mutableStateOf("") }
+
     var inviteEmail by remember { mutableStateOf("") }
-    var emailError by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
-        viewModel.toastMessage.collect { message ->
-            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
-        }
+        viewModel.toastMessage.collect { Toast.makeText(context, it, Toast.LENGTH_SHORT).show() }
     }
 
     LaunchedEffect(listId) {
@@ -65,7 +68,10 @@ fun ListDetailScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = { showItemDialog = true }) {
+            FloatingActionButton(onClick = {
+                itemTitle = ""; itemQuantity = ""; itemNote = ""
+                showCreateDialog = true
+            }) {
                 Icon(Icons.Default.Add, contentDescription = "Agregar Producto")
             }
         }
@@ -83,100 +89,96 @@ fun ListDetailScreen(
                     CircularProgressIndicator()
                 }
             } else if (state.items.isEmpty()) {
-                Text(
-                    "No hay ítems en este evento aún.",
-                    color = Color.Gray,
-                    modifier = Modifier.padding(top = 20.dp)
-                )
+                Text("No hay ítems aún.", color = Color.Gray, modifier = Modifier.padding(top = 20.dp))
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     items(state.items, key = { it.id }) { item ->
-                        ItemRow(
-                            item = item,
-                            onCheckedChange = { isChecked ->
-                                viewModel.toggleItemStatus(item, isCompleted = isChecked)
-                            }
-                        )
+                        Box(modifier = Modifier.clickable {
+                            selectedItem = item
+                            itemTitle = item.title
+                            itemQuantity = item.quantity
+                            itemNote = item.note
+                            showEditDialog = true
+                        }) {
+                            ItemRow(
+                                item = item,
+                                onCheckedChange = { isChecked ->
+                                    viewModel.toggleItemStatus(item, isCompleted = isChecked)
+                                }
+                            )
+                        }
                     }
                 }
             }
         }
 
-        if (showItemDialog) {
+        if (showCreateDialog) {
             AlertDialog(
-                onDismissRequest = { showItemDialog = false },
+                onDismissRequest = { showCreateDialog = false },
                 title = { Text("Nuevo ítem") },
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedTextField(value = title, onValueChange = { title = it }, label = { Text("Título") })
-                        OutlinedTextField(value = quantity, onValueChange = { quantity = it }, label = { Text("Cantidad") })
-                        OutlinedTextField(value = note, onValueChange = { note = it }, label = { Text("Nota") })
+                        OutlinedTextField(value = itemTitle, onValueChange = { itemTitle = it }, label = { Text("Título") })
+                        OutlinedTextField(value = itemQuantity, onValueChange = { itemQuantity = it }, label = { Text("Cantidad") })
+                        OutlinedTextField(value = itemNote, onValueChange = { itemNote = it }, label = { Text("Nota") })
                     }
                 },
                 confirmButton = {
                     Button(onClick = {
-                        if (title.isNotBlank()) {
-                            viewModel.addItem(title, quantity, note, listId)
-                            title = ""; quantity = ""; note = ""; showItemDialog = false
+                        if (itemTitle.isNotBlank()) {
+                            viewModel.addItem(itemTitle, itemQuantity, itemNote, listId)
+                            showCreateDialog = false
                         }
                     }) { Text("Agregar") }
                 },
-                dismissButton = {
-                    TextButton(onClick = { showItemDialog = false }) { Text("Cancelar") }
-                }
+                dismissButton = { TextButton(onClick = { showCreateDialog = false }) { Text("Cancelar") } }
+            )
+        }
+
+        if (showEditDialog && selectedItem != null) {
+            AlertDialog(
+                onDismissRequest = { showEditDialog = false },
+                title = { Text("Editar ítem") },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedTextField(value = itemTitle, onValueChange = { itemTitle = it }, label = { Text("Título") })
+                        OutlinedTextField(value = itemQuantity, onValueChange = { itemQuantity = it }, label = { Text("Cantidad") })
+                        OutlinedTextField(value = itemNote, onValueChange = { itemNote = it }, label = { Text("Nota") })
+                    }
+                },
+                confirmButton = {
+                    Button(onClick = {
+                        if (itemTitle.isNotBlank()) {
+                            viewModel.updateItemContent(selectedItem!!.id, itemTitle, itemQuantity, itemNote)
+                            showEditDialog = false
+                        }
+                    }) { Text("Guardar") }
+                },
+                dismissButton = { TextButton(onClick = { showEditDialog = false }) { Text("Cancelar") } }
             )
         }
 
         if (showInviteDialog) {
             AlertDialog(
-                onDismissRequest = {
-                    showInviteDialog = false
-                    emailError = null
-                },
+                onDismissRequest = { showInviteDialog = false },
                 title = { Text("Invitar Colaborador") },
                 text = {
                     Column {
-                        Text("Ingresa el correo de la persona que quieres unir a esta lista.")
+                        Text("Ingresa el correo de la persona.")
                         Spacer(Modifier.height(8.dp))
-                        OutlinedTextField(
-                            value = inviteEmail,
-                            onValueChange = {
-                                inviteEmail = it
-                                emailError = null
-                            },
-                            label = { Text("Correo electrónico") },
-                            singleLine = true,
-                            isError = emailError != null,
-                            supportingText = {
-                                if (emailError != null) {
-                                    Text(text = emailError!!, color = MaterialTheme.colorScheme.error)
-                                }
-                            }
-                        )
+                        OutlinedTextField(value = inviteEmail, onValueChange = { inviteEmail = it }, label = { Text("Correo") })
                     }
                 },
                 confirmButton = {
                     Button(onClick = {
-                        if (inviteEmail.isNotBlank()) {
-                            if (!inviteEmail.contains("@")) {
-                                emailError = "Ingresa un correo válido"
-                            } else {
-                                viewModel.inviteUser(inviteEmail, listId)
-                                inviteEmail = ""
-                                showInviteDialog = false
-                            }
-                        }
+                        viewModel.inviteUser(inviteEmail, listId)
+                        inviteEmail = ""; showInviteDialog = false
                     }) { Text("Invitar") }
                 },
-                dismissButton = {
-                    TextButton(onClick = {
-                        showInviteDialog = false
-                        emailError = null
-                    }) { Text("Cancelar") }
-                }
+                dismissButton = { TextButton(onClick = { showInviteDialog = false }) { Text("Cancelar") } }
             )
         }
     }

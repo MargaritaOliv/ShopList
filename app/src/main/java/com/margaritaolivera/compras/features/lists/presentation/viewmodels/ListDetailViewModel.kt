@@ -2,10 +2,11 @@ package com.margaritaolivera.compras.features.lists.presentation.viewmodels
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.margaritaolivera.compras.core.network.ApiClient
 import com.margaritaolivera.compras.core.network.WebSocketManager
 import com.margaritaolivera.compras.features.lists.data.remote.InviteRequest
-import com.margaritaolivera.compras.features.lists.data.remote.ListApiService
 import com.margaritaolivera.compras.features.lists.data.remote.SocketResponse
+import com.margaritaolivera.compras.features.lists.data.remote.UpdateItemRequest
 import com.margaritaolivera.compras.features.lists.domain.model.ListItem
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -20,7 +21,7 @@ import javax.inject.Inject
 @HiltViewModel
 class ListDetailViewModel @Inject constructor(
     private val webSocketManager: WebSocketManager,
-    private val apiService: ListApiService
+    private val apiClient: ApiClient
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ListDetailUiState())
@@ -29,17 +30,14 @@ class ListDetailViewModel @Inject constructor(
     private val _toastMessage = MutableSharedFlow<String>()
     val toastMessage = _toastMessage.asSharedFlow()
 
-    private val jsonParser = Json {
-        ignoreUnknownKeys = true
-        coerceInputValues = true
-    }
+    private val jsonParser = Json { ignoreUnknownKeys = true; coerceInputValues = true }
 
     fun connectToWebSocket(listId: String) {
         _uiState.update { it.copy(isLoading = true) }
 
         viewModelScope.launch {
             try {
-                val existingItems = apiService.getItems(listId)
+                val existingItems = apiClient.getItems(listId)
                 _uiState.update { it.copy(items = existingItems, isLoading = false) }
             } catch (e: Exception) {
                 _uiState.update { it.copy(isLoading = false, error = e.message) }
@@ -55,8 +53,7 @@ class ListDetailViewModel @Inject constructor(
                 webSocketManager.messages.collect { json ->
                     handleIncomingMessage(json)
                 }
-            } catch (e: Exception) {
-            }
+            } catch (e: Exception) { }
         }
     }
 
@@ -64,15 +61,10 @@ class ListDetailViewModel @Inject constructor(
         if (email.isBlank()) return
         viewModelScope.launch {
             try {
-                apiService.inviteUser(listId, InviteRequest(email))
-                _toastMessage.emit("Invitación enviada correctamente a $email")
+                apiClient.inviteUser(listId, InviteRequest(email))
+                _toastMessage.emit("Invitación enviada")
             } catch (e: Exception) {
-                val errorMsg = e.message ?: ""
-                val finalMessage = when {
-                    errorMsg.contains("404") -> "Usuario no existente"
-                    else -> "Error al enviar la invitación"
-                }
-                _toastMessage.emit(finalMessage)
+                _toastMessage.emit("Error al invitar")
             }
         }
     }
@@ -99,8 +91,7 @@ class ListDetailViewModel @Inject constructor(
                     else -> currentState
                 }
             }
-        } catch (e: Exception) {
-        }
+        } catch (e: Exception) { }
     }
 
     fun addItem(title: String, quantity: String, note: String, listId: String) {
@@ -133,6 +124,17 @@ class ListDetailViewModel @Inject constructor(
             }
         """.trimIndent()
         webSocketManager.sendMessage(message)
+    }
+
+    fun updateItemContent(itemId: String, title: String, quantity: String, note: String) {
+        viewModelScope.launch {
+            try {
+                apiClient.updateItem(itemId, UpdateItemRequest(title, quantity, note))
+                _toastMessage.emit("Item actualizado")
+            } catch (e: Exception) {
+                _toastMessage.emit("Error al editar item")
+            }
+        }
     }
 
     override fun onCleared() {
