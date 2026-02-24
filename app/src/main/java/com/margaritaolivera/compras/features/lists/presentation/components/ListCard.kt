@@ -4,7 +4,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.List // <- Ícono actualizado para quitar la advertencia
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -94,22 +94,12 @@ fun ListCard(
                     }
                     Spacer(modifier = Modifier.height(4.dp))
                     LinearProgressIndicator(
-                        progress = { 0.5f },
-                        modifier = Modifier.fillMaxWidth().height(6.dp),
+                        progress = { 0f },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(6.dp),
                         color = Color.White,
                         trackColor = Color.White.copy(alpha = 0.3f),
-                    )
-                }
-                Spacer(modifier = Modifier.width(16.dp))
-                Surface(
-                    shape = RoundedCornerShape(50),
-                    color = Color.Black.copy(alpha = 0.2f),
-                    modifier = Modifier.padding(top = 8.dp)
-                ) {
-                    Text(
-                        text = "Items",
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold)
                     )
                 }
             }

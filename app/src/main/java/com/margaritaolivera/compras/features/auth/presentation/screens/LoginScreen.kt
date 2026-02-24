@@ -72,7 +72,7 @@ fun LoginScreen(
 
             CustomTextField(
                 value = email,
-                onValueChange = { email = it },
+                onValueChange = { email = it; viewModel.resetState() },
                 label = "Correo electrónico",
                 icon = Icons.Default.Email,
                 keyboardType = KeyboardType.Email
@@ -82,7 +82,7 @@ fun LoginScreen(
 
             CustomTextField(
                 value = password,
-                onValueChange = { password = it },
+                onValueChange = { password = it; viewModel.resetState() },
                 label = "Contraseña",
                 icon = Icons.Default.Lock,
                 isPassword = true

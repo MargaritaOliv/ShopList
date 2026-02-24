@@ -1,5 +1,6 @@
 package com.margaritaolivera.compras.features.auth.presentation.screens
 
+import android.widget.Toast
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -10,6 +11,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -24,6 +26,7 @@ fun RegisterScreen(
     onNavigateToLogin: () -> Unit
 ) {
     val state by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
     var nombre by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -32,6 +35,9 @@ fun RegisterScreen(
 
     LaunchedEffect(state.isSuccess) {
         if (state.isSuccess) {
+            state.successMessage?.let {
+                Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
+            }
             onRegisterSuccess()
             viewModel.resetState()
         }
@@ -66,7 +72,7 @@ fun RegisterScreen(
 
             CustomTextField(
                 value = nombre,
-                onValueChange = { nombre = it; localError = null },
+                onValueChange = { nombre = it; localError = null; viewModel.resetState() },
                 label = "Nombre Completo",
                 icon = Icons.Default.Person
             )
@@ -75,7 +81,7 @@ fun RegisterScreen(
 
             CustomTextField(
                 value = email,
-                onValueChange = { email = it; localError = null },
+                onValueChange = { email = it; localError = null; viewModel.resetState() },
                 label = "Correo electrónico",
                 icon = Icons.Default.Email,
                 keyboardType = KeyboardType.Email
@@ -85,7 +91,7 @@ fun RegisterScreen(
 
             CustomTextField(
                 value = password,
-                onValueChange = { password = it; localError = null },
+                onValueChange = { password = it; localError = null; viewModel.resetState() },
                 label = "Contraseña",
                 icon = Icons.Default.Lock,
                 isPassword = true
@@ -95,7 +101,7 @@ fun RegisterScreen(
 
             CustomTextField(
                 value = confirmPassword,
-                onValueChange = { confirmPassword = it; localError = null },
+                onValueChange = { confirmPassword = it; localError = null; viewModel.resetState() },
                 label = "Confirmar contraseña",
                 icon = Icons.Default.Lock,
                 isPassword = true

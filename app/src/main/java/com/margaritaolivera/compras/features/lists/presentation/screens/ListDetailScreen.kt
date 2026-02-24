@@ -1,18 +1,19 @@
 package com.margaritaolivera.compras.features.lists.presentation.screens
 
+import android.widget.Toast
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.PersonAdd
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.margaritaolivera.compras.features.lists.presentation.components.ItemRow
@@ -26,6 +27,7 @@ fun ListDetailScreen(
     viewModel: ListDetailViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
 
     var showItemDialog by remember { mutableStateOf(false) }
     var showInviteDialog by remember { mutableStateOf(false) }
@@ -34,6 +36,13 @@ fun ListDetailScreen(
     var quantity by remember { mutableStateOf("") }
     var note by remember { mutableStateOf("") }
     var inviteEmail by remember { mutableStateOf("") }
+    var emailError by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(Unit) {
+        viewModel.toastMessage.collect { message ->
+            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+        }
+    }
 
     LaunchedEffect(listId) {
         viewModel.connectToWebSocket(listId)
@@ -50,7 +59,7 @@ fun ListDetailScreen(
                 },
                 actions = {
                     IconButton(onClick = { showInviteDialog = true }) {
-                        Icon(Icons.Default.PersonAdd, contentDescription = "Invitar")
+                        Icon(Icons.Default.Person, contentDescription = "Invitar")
                     }
                 }
             )
@@ -63,26 +72,10 @@ fun ListDetailScreen(
     ) { padding ->
         Column(modifier = Modifier.padding(padding).padding(horizontal = 24.dp)) {
 
-            Card(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text("ID de la lista", style = MaterialTheme.typography.labelMedium)
-                    Text(
-                        text = state.shareCode,
-                        style = MaterialTheme.typography.titleLarge.copy(
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    )
-                }
-            }
-
             Text(
                 text = "Productos / Tareas",
                 style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(vertical = 8.dp)
+                modifier = Modifier.padding(vertical = 16.dp)
             )
 
             if (state.isLoading) {
@@ -104,7 +97,7 @@ fun ListDetailScreen(
                         ItemRow(
                             item = item,
                             onCheckedChange = { isChecked ->
-                                viewModel.toggleItemStatus(item, isChecked)
+                                viewModel.toggleItemStatus(item, isCompleted = isChecked)
                             }
                         )
                     }
@@ -130,13 +123,19 @@ fun ListDetailScreen(
                             title = ""; quantity = ""; note = ""; showItemDialog = false
                         }
                     }) { Text("Agregar") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showItemDialog = false }) { Text("Cancelar") }
                 }
             )
         }
 
         if (showInviteDialog) {
             AlertDialog(
-                onDismissRequest = { showInviteDialog = false },
+                onDismissRequest = {
+                    showInviteDialog = false
+                    emailError = null
+                },
                 title = { Text("Invitar Colaborador") },
                 text = {
                     Column {
@@ -144,23 +143,39 @@ fun ListDetailScreen(
                         Spacer(Modifier.height(8.dp))
                         OutlinedTextField(
                             value = inviteEmail,
-                            onValueChange = { inviteEmail = it },
+                            onValueChange = {
+                                inviteEmail = it
+                                emailError = null
+                            },
                             label = { Text("Correo electrónico") },
-                            singleLine = true
+                            singleLine = true,
+                            isError = emailError != null,
+                            supportingText = {
+                                if (emailError != null) {
+                                    Text(text = emailError!!, color = MaterialTheme.colorScheme.error)
+                                }
+                            }
                         )
                     }
                 },
                 confirmButton = {
                     Button(onClick = {
                         if (inviteEmail.isNotBlank()) {
-                            viewModel.inviteUser(inviteEmail, listId)
-                            inviteEmail = ""
-                            showInviteDialog = false
+                            if (!inviteEmail.contains("@")) {
+                                emailError = "Ingresa un correo válido"
+                            } else {
+                                viewModel.inviteUser(inviteEmail, listId)
+                                inviteEmail = ""
+                                showInviteDialog = false
+                            }
                         }
                     }) { Text("Invitar") }
                 },
                 dismissButton = {
-                    TextButton(onClick = { showInviteDialog = false }) { Text("Cancelar") }
+                    TextButton(onClick = {
+                        showInviteDialog = false
+                        emailError = null
+                    }) { Text("Cancelar") }
                 }
             )
         }

@@ -85,7 +85,7 @@ fun HomeScreen(
         ) {
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Header
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,

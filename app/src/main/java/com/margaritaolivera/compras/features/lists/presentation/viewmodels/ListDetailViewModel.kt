@@ -8,7 +8,9 @@ import com.margaritaolivera.compras.features.lists.data.remote.ListApiService
 import com.margaritaolivera.compras.features.lists.data.remote.SocketResponse
 import com.margaritaolivera.compras.features.lists.domain.model.ListItem
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -24,13 +26,16 @@ class ListDetailViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(ListDetailUiState())
     val uiState = _uiState.asStateFlow()
 
+    private val _toastMessage = MutableSharedFlow<String>()
+    val toastMessage = _toastMessage.asSharedFlow()
+
     private val jsonParser = Json {
         ignoreUnknownKeys = true
         coerceInputValues = true
     }
 
     fun connectToWebSocket(listId: String) {
-        _uiState.update { it.copy(shareCode = listId.takeLast(6).uppercase(), isLoading = true) }
+        _uiState.update { it.copy(isLoading = true) }
 
         viewModelScope.launch {
             try {
@@ -60,7 +65,14 @@ class ListDetailViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 apiService.inviteUser(listId, InviteRequest(email))
+                _toastMessage.emit("Invitación enviada correctamente a $email")
             } catch (e: Exception) {
+                val errorMsg = e.message ?: ""
+                val finalMessage = when {
+                    errorMsg.contains("404") -> "Usuario no existente"
+                    else -> "Error al enviar la invitación"
+                }
+                _toastMessage.emit(finalMessage)
             }
         }
     }

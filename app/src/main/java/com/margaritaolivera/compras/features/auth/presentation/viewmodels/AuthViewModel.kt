@@ -25,7 +25,6 @@ class AuthViewModel @Inject constructor(
             _uiState.update { it.copy(error = "Completa todos los campos") }
             return
         }
-
         _uiState.update { it.copy(isLoading = true, error = null) }
         viewModelScope.launch {
             loginUseCase(email, pass).fold(
@@ -44,15 +43,24 @@ class AuthViewModel @Inject constructor(
             _uiState.update { it.copy(error = "Completa todos los campos") }
             return
         }
-
         _uiState.update { it.copy(isLoading = true, error = null) }
         viewModelScope.launch {
             registerUseCase(email, pass, name).fold(
                 onSuccess = {
-                    _uiState.update { it.copy(isLoading = false, isSuccess = true) }
+                    _uiState.update { it.copy(
+                        isLoading = false,
+                        isSuccess = true,
+                        successMessage = "Usuario registrado correctamente"
+                    ) }
                 },
                 onFailure = { error ->
-                    _uiState.update { it.copy(isLoading = false, error = error.message ?: "Error al registrarse") }
+                    val message = error.message ?: ""
+                    val finalError = when {
+                        message.contains("409") -> "El correo ya está registrado"
+                        message.contains("400") -> "Datos de registro inválidos"
+                        else -> "Error al registrarse. Intenta más tarde"
+                    }
+                    _uiState.update { it.copy(isLoading = false, error = finalError) }
                 }
             )
         }
