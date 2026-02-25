@@ -44,4 +44,10 @@ interface ApiClient {
 
     @POST("api/lists/{id}/invite")
     suspend fun inviteUser(@Path("id") listId: String, @Body request: InviteRequest)
+
+    @GET("api/invitations/{userId}")
+    suspend fun getPendingInvitations(@Path("userId") userId: String): List<InvitationDto>
+
+    @POST("api/invitations/respond")
+    suspend fun respondToInvitation(@Body request: HandleInvitationRequest): Unit
 }

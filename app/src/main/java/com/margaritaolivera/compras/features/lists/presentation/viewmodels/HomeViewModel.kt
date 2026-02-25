@@ -31,11 +31,12 @@ class HomeViewModel @Inject constructor(
             }
 
             val avatar = tokenManager.getUserAvatar()
+            val userId = tokenManager.getUserId()
             _uiState.update { it.copy(userAvatar = avatar) }
 
-            val userId = tokenManager.getUserId()
             if (userId != null) {
                 fetchLists(userId)
+                fetchInvitations(userId)
             } else {
                 _uiState.update { it.copy(isLoading = false, error = "No se encontró sesión") }
             }
@@ -53,16 +54,43 @@ class HomeViewModel @Inject constructor(
         )
     }
 
-    fun createNewEvent(name: String) {
+    private suspend fun fetchInvitations(userId: String) {
+        listRepository.getPendingInvitations(userId).fold(
+            onSuccess = { invites ->
+                _uiState.update { it.copy(invitations = invites) }
+            },
+            onFailure = { }
+        )
+    }
+
+    fun respondToInvitation(invitationId: String, accept: Boolean) {
         viewModelScope.launch {
             val userId = tokenManager.getUserId() ?: return@launch
             _uiState.update { it.copy(isLoading = true) }
 
+            listRepository.respondToInvitation(invitationId, userId, accept).fold(
+                onSuccess = {
+                    fetchInvitations(userId)
+                    if (accept) {
+                        fetchLists(userId)
+                    } else {
+                        _uiState.update { it.copy(isLoading = false) }
+                    }
+                },
+                onFailure = { error ->
+                    _uiState.update { it.copy(isLoading = false, error = "Error al procesar: ${error.message}") }
+                }
+            )
+        }
+    }
+
+    fun createNewEvent(name: String) {
+        viewModelScope.launch {
+            val userId = tokenManager.getUserId() ?: return@launch
+            _uiState.update { it.copy(isLoading = true) }
             listRepository.createList(name, userId).fold(
                 onSuccess = { fetchLists(userId) },
-                onFailure = { error ->
-                    _uiState.update { it.copy(isLoading = false, error = error.message) }
-                }
+                onFailure = { error -> _uiState.update { it.copy(isLoading = false, error = error.message) } }
             )
         }
     }
@@ -73,9 +101,7 @@ class HomeViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true) }
             listRepository.deleteList(listId).fold(
                 onSuccess = { fetchLists(userId) },
-                onFailure = { error ->
-                    _uiState.update { it.copy(isLoading = false, error = "Error al eliminar") }
-                }
+                onFailure = { _uiState.update { it.copy(isLoading = false, error = "Error al eliminar") } }
             )
         }
     }
@@ -86,9 +112,7 @@ class HomeViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true) }
             listRepository.updateList(listId, newName).fold(
                 onSuccess = { fetchLists(userId) },
-                onFailure = { error ->
-                    _uiState.update { it.copy(isLoading = false, error = "Error al actualizar") }
-                }
+                onFailure = { _uiState.update { it.copy(isLoading = false, error = "Error al actualizar") } }
             )
         }
     }
