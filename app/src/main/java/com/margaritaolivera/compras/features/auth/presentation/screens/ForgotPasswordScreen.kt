@@ -1,15 +1,16 @@
 package com.margaritaolivera.compras.features.auth.presentation.screens
 
+import android.widget.Toast
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -18,19 +19,23 @@ import com.margaritaolivera.compras.features.auth.presentation.viewmodels.AuthVi
 import com.margaritaolivera.compras.features.auth.presentation.components.CustomTextField
 
 @Composable
-fun LoginScreen(
+fun ForgotPasswordScreen(
     viewModel: AuthViewModel,
-    onLoginSuccess: () -> Unit,
-    onNavigateToRegister: () -> Unit,
-    onNavigateToForgotPassword: () -> Unit
+    onNavigateBack: () -> Unit
 ) {
     val state by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
     var email by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
+    var newPassword by remember { mutableStateOf("") }
+    var confirmPassword by remember { mutableStateOf("") }
+    var localError by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(state.isSuccess) {
         if (state.isSuccess) {
-            onLoginSuccess()
+            state.successMessage?.let {
+                Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
+            }
+            onNavigateBack()
             viewModel.resetState()
         }
     }
@@ -46,17 +51,8 @@ fun LoginScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Icon(
-                imageVector = Icons.Default.ShoppingCart,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(100.dp)
-            )
-
-            Spacer(modifier = Modifier.height(32.dp))
-
             Text(
-                text = "¡Bienvenido!",
+                text = "Recuperar Acceso",
                 style = MaterialTheme.typography.headlineLarge.copy(
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onBackground,
@@ -64,7 +60,7 @@ fun LoginScreen(
                 )
             )
             Text(
-                text = "Inicia sesión para continuar",
+                text = "Ingresa tu correo y la nueva contraseña",
                 style = MaterialTheme.typography.bodyLarge.copy(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 ),
@@ -73,7 +69,7 @@ fun LoginScreen(
 
             CustomTextField(
                 value = email,
-                onValueChange = { email = it; viewModel.resetState() },
+                onValueChange = { email = it; localError = null; viewModel.resetState() },
                 label = "Correo electrónico",
                 icon = Icons.Default.Email,
                 keyboardType = KeyboardType.Email
@@ -82,37 +78,49 @@ fun LoginScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             CustomTextField(
-                value = password,
-                onValueChange = { password = it; viewModel.resetState() },
-                label = "Contraseña",
+                value = newPassword,
+                onValueChange = { newPassword = it; localError = null; viewModel.resetState() },
+                label = "Nueva Contraseña",
                 icon = Icons.Default.Lock,
                 isPassword = true
             )
 
-            TextButton(
-                onClick = { onNavigateToForgotPassword() },
-                modifier = Modifier.align(Alignment.End)
-            ) {
-                Text("¿Olvidaste la contraseña?", color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
+            Spacer(modifier = Modifier.height(16.dp))
+
+            CustomTextField(
+                value = confirmPassword,
+                onValueChange = { confirmPassword = it; localError = null; viewModel.resetState() },
+                label = "Confirmar nueva contraseña",
+                icon = Icons.Default.Lock,
+                isPassword = true
+            )
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            if (state.error != null) {
+            val displayError = localError ?: state.error
+            if (displayError != null) {
                 Text(
-                    text = state.error!!,
+                    text = displayError,
                     color = MaterialTheme.colorScheme.error,
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
             }
 
             Button(
-                onClick = { viewModel.login(email, password) },
+                onClick = {
+                    if (newPassword != confirmPassword) {
+                        localError = "Las contraseñas no coinciden"
+                    } else if (newPassword.length < 6) {
+                        localError = "La contraseña debe tener al menos 6 caracteres"
+                    } else {
+                        viewModel.resetPassword(email, newPassword)
+                    }
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
                 shape = RoundedCornerShape(percent = 50),
-                enabled = !state.isLoading && email.isNotEmpty() && password.isNotEmpty()
+                enabled = !state.isLoading && email.isNotEmpty() && newPassword.isNotEmpty()
             ) {
                 if (state.isLoading) {
                     CircularProgressIndicator(
@@ -121,7 +129,7 @@ fun LoginScreen(
                     )
                 } else {
                     Text(
-                        text = "INICIAR SESIÓN",
+                        text = "ACTUALIZAR CONTRASEÑA",
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                         color = MaterialTheme.colorScheme.onPrimary
                     )
@@ -130,11 +138,12 @@ fun LoginScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("¿No tienes cuenta?", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                TextButton(onClick = onNavigateToRegister) {
-                    Text("Regístrate aquí", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
-                }
+            TextButton(onClick = onNavigateBack) {
+                Text(
+                    text = "Volver al inicio de sesión",
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold
+                )
             }
         }
     }

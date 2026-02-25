@@ -13,12 +13,14 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.repeatOnLifecycle
+import coil.compose.AsyncImage
 import com.margaritaolivera.compras.features.lists.domain.model.ShoppingList
 import com.margaritaolivera.compras.features.lists.presentation.components.ListCard
 import com.margaritaolivera.compras.features.lists.presentation.viewmodels.HomeViewModel
@@ -27,7 +29,8 @@ import com.margaritaolivera.compras.features.lists.presentation.viewmodels.HomeV
 @Composable
 fun HomeScreen(
     viewModel: HomeViewModel,
-    onNavigateToListDetail: (String) -> Unit
+    onNavigateToListDetail: (String) -> Unit,
+    onNavigateToProfile: () -> Unit
 ) {
     val state by viewModel.uiState.collectAsState()
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -152,12 +155,31 @@ fun HomeScreen(
                     text = "ShopList",
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
                 )
-                Surface(
-                    shape = CircleShape,
-                    color = MaterialTheme.colorScheme.surfaceVariant,
+
+                IconButton(
+                    onClick = onNavigateToProfile,
                     modifier = Modifier.size(40.dp)
                 ) {
-                    Icon(Icons.Default.Person, contentDescription = "Perfil", modifier = Modifier.padding(8.dp))
+                    Surface(
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                    ) {
+                        val avatarUrl = state.userAvatar
+                        if (!avatarUrl.isNullOrEmpty()) {
+                            AsyncImage(
+                                model = avatarUrl,
+                                contentDescription = "Perfil",
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
+                            )
+                        } else {
+                            Icon(
+                                imageVector = Icons.Default.Person,
+                                contentDescription = "Perfil",
+                                modifier = Modifier.padding(8.dp)
+                            )
+                        }
+                    }
                 }
             }
 

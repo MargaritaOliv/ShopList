@@ -1,21 +1,9 @@
 package com.margaritaolivera.compras.core.network
 
-import com.margaritaolivera.compras.features.auth.data.remote.LoginRequest
-import com.margaritaolivera.compras.features.auth.data.remote.RegisterRequest
-import com.margaritaolivera.compras.features.auth.data.remote.AuthResponse
-import com.margaritaolivera.compras.features.lists.data.remote.CreateListRequest
-import com.margaritaolivera.compras.features.lists.data.remote.InviteRequest
+import com.margaritaolivera.compras.features.auth.data.remote.*
+import com.margaritaolivera.compras.features.lists.data.remote.*
 import com.margaritaolivera.compras.features.lists.domain.model.ListItem
-import com.margaritaolivera.compras.features.lists.data.remote.ShoppingListDto
-import com.margaritaolivera.compras.features.lists.data.remote.UpdateItemRequest
-import com.margaritaolivera.compras.features.lists.data.remote.UpdateListRequest
-import retrofit2.http.Body
-import retrofit2.http.DELETE
-import retrofit2.http.GET
-import retrofit2.http.POST
-import retrofit2.http.PUT
-import retrofit2.http.Path
-import retrofit2.http.Query
+import retrofit2.http.*
 
 interface ApiClient {
     @POST("auth/login")
@@ -23,6 +11,18 @@ interface ApiClient {
 
     @POST("auth/register")
     suspend fun register(@Body request: RegisterRequest): AuthResponse
+
+    @POST("auth/reset-password")
+    suspend fun resetPassword(@Body request: ResetPasswordRequest): Unit
+
+    @PUT("auth/profile/{id}")
+    suspend fun updateProfile(@Path("id") id: String, @Body request: UpdateProfileRequest): Unit
+
+    @GET("auth/profile/{id}")
+    suspend fun getProfile(@Path("id") id: String): UserDto
+
+    @DELETE("auth/profile/{id}")
+    suspend fun deleteAccount(@Path("id") id: String)
 
     @GET("api/lists")
     suspend fun getLists(@Query("userId") userId: String): List<ShoppingListDto>

@@ -30,6 +30,9 @@ class HomeViewModel @Inject constructor(
                 }
             }
 
+            val avatar = tokenManager.getUserAvatar()
+            _uiState.update { it.copy(userAvatar = avatar) }
+
             val userId = tokenManager.getUserId()
             if (userId != null) {
                 fetchLists(userId)
