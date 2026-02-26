@@ -1,7 +1,11 @@
 package com.margaritaolivera.compras.features.auth.presentation.viewmodels
 
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.cloudinary.android.MediaManager
+import com.cloudinary.android.callback.ErrorInfo
+import com.cloudinary.android.callback.UploadCallback
 import com.margaritaolivera.compras.core.network.TokenManager
 import com.margaritaolivera.compras.features.auth.domain.usecase.*
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -49,8 +53,6 @@ class AuthViewModel @Inject constructor(
         viewModelScope.launch {
             loginUseCase(email, pass).fold(
                 onSuccess = {
-                    // Después de un login exitoso, forzamos una recarga de los datos
-                    // para asegurar que el estado tenga la imagen que el UseCase guardó en TokenManager
                     val id = tokenManager.getUserId() ?: ""
                     val name = tokenManager.getUserName() ?: ""
                     val avatar = tokenManager.getUserAvatar() ?: ""
@@ -120,31 +122,55 @@ class AuthViewModel @Inject constructor(
             _uiState.update { it.copy(error = "Error: ID de usuario no encontrado") }
             return
         }
+
         _uiState.update { it.copy(isLoading = true, error = null) }
+
+        if (avatar == null || avatar.startsWith("http")) {
+            executeServerUpdate(id, name, email, avatar)
+            return
+        }
+
+        val uri = Uri.parse(avatar)
+        MediaManager.get().upload(uri)
+            .unsigned("perfil_compras")
+            .callback(object : UploadCallback {
+                override fun onStart(requestId: String?) {}
+                override fun onProgress(requestId: String?, bytes: Long, totalBytes: Long) {}
+
+                override fun onSuccess(requestId: String?, resultData: Map<*, *>?) {
+                    val imageUrl = resultData?.get("secure_url") as? String
+                    executeServerUpdate(id, name, email, imageUrl)
+                }
+
+                override fun onError(requestId: String?, error: ErrorInfo?) {
+                    _uiState.update { it.copy(isLoading = false, error = "Error al subir imagen") }
+                }
+
+                override fun onReschedule(requestId: String?, error: ErrorInfo?) {}
+            }).dispatch()
+    }
+
+    private fun executeServerUpdate(id: String, name: String, email: String, avatarUrl: String?) {
         viewModelScope.launch {
-            updateProfileUseCase(id, name, email, avatar).fold(
+            updateProfileUseCase(id, name, email, avatarUrl).fold(
                 onSuccess = {
                     val currentToken = tokenManager.getToken() ?: ""
+                    tokenManager.saveSession(
+                        token = currentToken,
+                        userId = id,
+                        userName = name,
+                        userEmail = email,
+                        userAvatar = avatarUrl
+                    )
 
-                    // Guardamos en el almacenamiento local para que persista aunque cierres la app
-                    viewModelScope.launch {
-                        tokenManager.saveSession(
-                            token = currentToken,
-                            userId = id,
-                            userName = name,
-                            userEmail = email,
-                            userAvatar = avatar
-                        )
-
-                        _uiState.update { it.copy(
-                            isLoading = false,
-                            isSuccess = true,
-                            userName = name,
-                            userEmail = email,
-                            userAvatar = avatar,
-                            successMessage = "Perfil actualizado correctamente"
-                        ) }
-                    }
+                    _uiState.update { it.copy(
+                        isLoading = false,
+                        isSuccess = true,
+                        userName = name,
+                        userEmail = email,
+                        userAvatar = avatarUrl,
+                        successMessage = "Perfil actualizado correctamente"
+                    ) }
                 },
                 onFailure = {
                     _uiState.update { it.copy(isLoading = false, error = "Error al actualizar el perfil") }

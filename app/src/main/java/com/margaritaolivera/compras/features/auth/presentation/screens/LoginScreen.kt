@@ -5,7 +5,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -14,6 +13,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.airbnb.lottie.compose.*
+import com.margaritaolivera.compras.R
 import com.margaritaolivera.compras.features.auth.presentation.viewmodels.AuthViewModel
 import com.margaritaolivera.compras.features.auth.presentation.components.CustomTextField
 
@@ -27,6 +28,12 @@ fun LoginScreen(
     val state by viewModel.uiState.collectAsState()
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+
+    val composition by rememberLottieComposition(LottieCompositionSpec.RawRes(R.raw.iconshop))
+    val progress by animateLottieCompositionAsState(
+        composition = composition,
+        iterations = LottieConstants.IterateForever
+    )
 
     LaunchedEffect(state.isSuccess) {
         if (state.isSuccess) {
@@ -46,14 +53,13 @@ fun LoginScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Icon(
-                imageVector = Icons.Default.ShoppingCart,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(100.dp)
+            LottieAnimation(
+                composition = composition,
+                progress = { progress },
+                modifier = Modifier.size(160.dp)
             )
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
             Text(
                 text = "¡Bienvenido!",

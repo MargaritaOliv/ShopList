@@ -10,7 +10,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -39,7 +38,8 @@ fun ProfileScreen(
     var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
-    var showDeleteDialog by remember { mutableStateOf(false) }
+
+    var showLogoutDialog by remember { mutableStateOf(false) }
 
     val galleryLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -60,22 +60,21 @@ fun ProfileScreen(
         }
     }
 
-    if (showDeleteDialog) {
+    if (showLogoutDialog) {
         AlertDialog(
-            onDismissRequest = { showDeleteDialog = false },
-            title = { Text("¿Eliminar cuenta?", fontWeight = FontWeight.Bold) },
-            text = { Text("Esta acción es irreversible. Se borrarán todas tus listas y datos personales.") },
+            onDismissRequest = { showLogoutDialog = false },
+            title = { Text("Cerrar sesión", fontWeight = FontWeight.Bold) },
+            text = { Text("¿Estás seguro de que deseas salir de tu cuenta?") },
             confirmButton = {
                 Button(
                     onClick = {
-                        viewModel.deleteAccount(userId, onLogout)
-                        showDeleteDialog = false
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-                ) { Text("Eliminar definitivamente") }
+                        viewModel.logout(onLogout)
+                        showLogoutDialog = false
+                    }
+                ) { Text("Cerrar Sesión") }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteDialog = false }) { Text("Cancelar") }
+                TextButton(onClick = { showLogoutDialog = false }) { Text("Cancelar") }
             }
         )
     }
@@ -87,11 +86,6 @@ fun ProfileScreen(
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Regresar")
-                    }
-                },
-                actions = {
-                    IconButton(onClick = { viewModel.logout(onLogout) }) {
-                        Icon(Icons.AutoMirrored.Filled.ExitToApp, null, tint = MaterialTheme.colorScheme.error)
                     }
                 }
             )
@@ -161,9 +155,11 @@ fun ProfileScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            TextButton(onClick = { showDeleteDialog = true }) {
-                Text("Eliminar cuenta permanentemente", color = MaterialTheme.colorScheme.error)
+            TextButton(onClick = { showLogoutDialog = true }) {
+                Text("Cerrar sesión", color = MaterialTheme.colorScheme.error)
             }
+
+            Spacer(modifier = Modifier.height(32.dp))
         }
     }
 }
