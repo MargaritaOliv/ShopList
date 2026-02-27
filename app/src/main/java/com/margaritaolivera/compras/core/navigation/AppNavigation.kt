@@ -7,8 +7,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.margaritaolivera.compras.features.auth.presentation.screens.LoginScreen
-import com.margaritaolivera.compras.features.auth.presentation.screens.RegisterScreen
+import com.margaritaolivera.compras.features.auth.presentation.screens.*
 import com.margaritaolivera.compras.features.auth.presentation.viewmodels.AuthViewModel
 import com.margaritaolivera.compras.features.lists.presentation.screens.HomeScreen
 import com.margaritaolivera.compras.features.lists.presentation.screens.ListDetailScreen
@@ -21,7 +20,6 @@ fun AppNavigation() {
 
     NavHost(navController = navController, startDestination = "login") {
 
-
         composable("login") {
             val authViewModel: AuthViewModel = hiltViewModel()
             LoginScreen(
@@ -31,7 +29,8 @@ fun AppNavigation() {
                         popUpTo("login") { inclusive = true }
                     }
                 },
-                onNavigateToRegister = { navController.navigate("register") }
+                onNavigateToRegister = { navController.navigate("register") },
+                onNavigateToForgotPassword = { navController.navigate("forgot_password") }
             )
         }
 
@@ -48,12 +47,34 @@ fun AppNavigation() {
             )
         }
 
+        composable("forgot_password") {
+            val authViewModel: AuthViewModel = hiltViewModel()
+            ForgotPasswordScreen(
+                viewModel = authViewModel,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
         composable("home") {
             val homeViewModel: HomeViewModel = hiltViewModel()
             HomeScreen(
                 viewModel = homeViewModel,
                 onNavigateToListDetail = { listId ->
                     navController.navigate("detail/$listId")
+                },
+                onNavigateToProfile = { navController.navigate("profile") } // ACTIVADO
+            )
+        }
+
+        composable("profile") {
+            val authViewModel: AuthViewModel = hiltViewModel()
+            ProfileScreen(
+                viewModel = authViewModel,
+                onNavigateBack = { navController.popBackStack() },
+                onLogout = {
+                    navController.navigate("login") {
+                        popUpTo("home") { inclusive = true }
+                    }
                 }
             )
         }

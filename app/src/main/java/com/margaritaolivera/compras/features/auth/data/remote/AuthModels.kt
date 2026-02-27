@@ -17,6 +17,19 @@ data class RegisterRequest(
 )
 
 @Serializable
+data class ResetPasswordRequest(
+    val email: String,
+    @SerialName("newPassword") val newPassword: String
+)
+
+@Serializable
+data class UpdateProfileRequest(
+    @SerialName("display_name") val displayName: String,
+    val email: String,
+    @SerialName("avatar_url") val avatarUrl: String?
+)
+
+@Serializable
 data class AuthResponse(
     val token: String? = null,
     val user: UserDto? = null
@@ -25,5 +38,6 @@ data class AuthResponse(
 @Serializable
 data class UserDto(
     val id: String,
-    @SerialName("display_name") val displayName: String
+    @SerialName("display_name") val displayName: String,
+    @SerialName("avatar_url") val avatarUrl: String? = null
 )

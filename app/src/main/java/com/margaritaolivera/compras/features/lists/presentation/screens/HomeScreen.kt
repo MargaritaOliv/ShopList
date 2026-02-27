@@ -2,24 +2,31 @@ package com.margaritaolivera.compras.features.lists.presentation.screens
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.repeatOnLifecycle
+import coil.compose.AsyncImage
 import com.margaritaolivera.compras.features.lists.domain.model.ShoppingList
+import com.margaritaolivera.compras.features.lists.domain.model.Invitation
 import com.margaritaolivera.compras.features.lists.presentation.components.ListCard
 import com.margaritaolivera.compras.features.lists.presentation.viewmodels.HomeViewModel
 
@@ -27,7 +34,8 @@ import com.margaritaolivera.compras.features.lists.presentation.viewmodels.HomeV
 @Composable
 fun HomeScreen(
     viewModel: HomeViewModel,
-    onNavigateToListDetail: (String) -> Unit
+    onNavigateToListDetail: (String) -> Unit,
+    onNavigateToProfile: () -> Unit
 ) {
     val state by viewModel.uiState.collectAsState()
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -152,12 +160,31 @@ fun HomeScreen(
                     text = "ShopList",
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
                 )
-                Surface(
-                    shape = CircleShape,
-                    color = MaterialTheme.colorScheme.surfaceVariant,
+
+                IconButton(
+                    onClick = onNavigateToProfile,
                     modifier = Modifier.size(40.dp)
                 ) {
-                    Icon(Icons.Default.Person, contentDescription = "Perfil", modifier = Modifier.padding(8.dp))
+                    Surface(
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                    ) {
+                        val avatarUrl = state.userAvatar
+                        if (!avatarUrl.isNullOrEmpty()) {
+                            AsyncImage(
+                                model = avatarUrl,
+                                contentDescription = "Perfil",
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
+                            )
+                        } else {
+                            Icon(
+                                imageVector = Icons.Default.Person,
+                                contentDescription = "Perfil",
+                                modifier = Modifier.padding(8.dp)
+                            )
+                        }
+                    }
                 }
             }
 
@@ -177,6 +204,36 @@ fun HomeScreen(
             )
 
             Spacer(modifier = Modifier.height(24.dp))
+
+            if (state.invitations.isNotEmpty()) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Invitaciones",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Badge(containerColor = MaterialTheme.colorScheme.primary) {
+                        Text(state.invitations.size.toString(), color = Color.White)
+                    }
+                }
+
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                    contentPadding = PaddingValues(bottom = 24.dp)
+                ) {
+                    items(state.invitations) { invitation ->
+                        InvitationCardCompact(
+                            invitation = invitation,
+                            onAccept = { viewModel.respondToInvitation(invitation.id, true) },
+                            onReject = { viewModel.respondToInvitation(invitation.id, false) }
+                        )
+                    }
+                }
+            }
 
             Text(
                 text = "Mis Eventos",
@@ -207,6 +264,70 @@ fun HomeScreen(
                             }
                         }
                     }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun InvitationCardCompact(
+    invitation: Invitation,
+    onAccept: () -> Unit,
+    onReject: () -> Unit
+) {
+    Card(
+        modifier = Modifier.width(280.dp),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+        )
+    ) {
+        Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = invitation.invitedByName,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = "Lista: ${invitation.listName}",
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+
+            Row {
+                IconButton(
+                    onClick = onReject,
+                    modifier = Modifier.size(32.dp),
+                    colors = IconButtonDefaults.iconButtonColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.7f),
+                        contentColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Icon(Icons.Default.Close, contentDescription = "Rechazar", modifier = Modifier.size(16.dp))
+                }
+
+                Spacer(modifier = Modifier.width(4.dp))
+
+                IconButton(
+                    onClick = onAccept,
+                    modifier = Modifier.size(32.dp),
+                    colors = IconButtonDefaults.iconButtonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = Color.White
+                    )
+                ) {
+                    Icon(Icons.Default.Check, contentDescription = "Aceptar", modifier = Modifier.size(16.dp))
                 }
             }
         }

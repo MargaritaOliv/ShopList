@@ -10,6 +10,20 @@ data class CreateListRequest(
 )
 
 @Serializable
+data class InvitationDto(
+    val id: String,
+    @SerialName("name") val listName: String,
+    @SerialName("owner_name") val ownerName: String
+)
+
+@Serializable
+data class HandleInvitationRequest(
+    val listId: String,
+    val userId: String,
+    val accept: Boolean
+)
+
+@Serializable
 data class UpdateListRequest(
     val name: String
 )
